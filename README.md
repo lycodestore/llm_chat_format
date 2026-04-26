@@ -30,15 +30,15 @@
 
 ### 整体界面
 
-![整体界面占位图](./docs/images/ui-overview.png)
+![整体界面](./docs/images/ui-overview.png)
 
-### OpenAI 响应解析效果
+### OpenAI 请求体解析效果
 
-![OpenAI解析占位图](./docs/images/openai-example.png)
+![OpenAI解析效果](./docs/images/openai-example.png)
 
 ### Anthropic 请求解析效果（含 tools）
 
-![Anthropic解析占位图](./docs/images/anthropic-tools-example.png)
+![Anthropic解析效果](./docs/images/anthropic-tools-example.png)
 
 ## 快速开始
 

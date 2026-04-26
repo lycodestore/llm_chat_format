@@ -334,6 +334,18 @@
       apiFormatTagEl.textContent = `API 格式：${text}`;
     }
 
+    function isOpenAIToolDef(tool) {
+      if (!tool || typeof tool !== "object") return false;
+      if (tool.type === "function") return true;
+      return !!(tool.function && typeof tool.function === "object");
+    }
+
+    function isAnthropicToolDef(tool) {
+      if (!tool || typeof tool !== "object") return false;
+      if (isOpenAIToolDef(tool)) return false;
+      return typeof tool.name === "string" || tool.input_schema !== undefined;
+    }
+
     function detectApiFormat(parsed) {
       if (!parsed || typeof parsed !== "object") {
         return { vendor: "unknown", kind: "unknown", label: "未识别" };
@@ -351,10 +363,18 @@
         return { vendor: "anthropic", kind: "response", label: "Anthropic 响应体" };
       }
 
+      if (Array.isArray(parsed.tools) && parsed.tools.some(isOpenAIToolDef)) {
+        return { vendor: "openai", kind: "request", label: "OpenAI 请求体" };
+      }
+
+      if (parsed.tool_choice !== undefined || parsed.stream_options !== undefined) {
+        return { vendor: "openai", kind: "request", label: "OpenAI 请求体" };
+      }
+
       const hasAnthropicRequestMarkers =
         Array.isArray(parsed.system) ||
         typeof parsed.system === "string" ||
-        Array.isArray(parsed.tools) ||
+        (Array.isArray(parsed.tools) && parsed.tools.some(isAnthropicToolDef)) ||
         (!!parsed.tools && typeof parsed.tools === "object") ||
         !!parsed.context_management ||
         !!parsed.output_config ||
@@ -401,6 +421,31 @@
             role,
             content: normalizeContent(item?.content),
             reasoning: normalizeContent(item?.reasoning_content)
+          });
+        });
+      }
+
+      if (Array.isArray(parsed.tools)) {
+        meta.push(`tools_count: ${parsed.tools.length}`);
+        parsed.tools.forEach((tool, idx) => {
+          const func = tool?.function && typeof tool.function === "object" ? tool.function : tool;
+          const toolType = typeof tool?.type === "string" ? tool.type : "function";
+          const lines = [];
+          lines.push(`type: ${toolType}`);
+          lines.push(`name: ${func?.name ?? "unnamed"}`);
+          if (func?.description) lines.push(`description: ${decodeEscapedText(func.description)}`);
+          if (func?.parameters !== undefined) {
+            lines.push("parameters:");
+            lines.push(readableStringify(func.parameters));
+          } else if (func?.input_schema !== undefined) {
+            lines.push("input_schema:");
+            lines.push(readableStringify(func.input_schema));
+          }
+          items.push({
+            title: `[tool] #${idx + 1}  ${func?.name ?? "unnamed"}`,
+            role: "tool",
+            content: lines.join("\n"),
+            reasoning: ""
           });
         });
       }
@@ -483,11 +528,15 @@
         return normalizeContent(tool);
       }
       const lines = [];
-      lines.push(`name: ${tool?.name ?? "-"}`);
-      if (tool?.description) lines.push(`description: ${decodeEscapedText(tool.description)}`);
-      if (tool?.input_schema !== undefined) {
+      const openaiLike = tool?.function && typeof tool.function === "object" ? tool.function : null;
+      const toolName = tool?.name ?? openaiLike?.name ?? "-";
+      const toolDesc = tool?.description ?? openaiLike?.description;
+      const schema = tool?.input_schema !== undefined ? tool.input_schema : openaiLike?.parameters;
+      lines.push(`name: ${toolName}`);
+      if (toolDesc) lines.push(`description: ${decodeEscapedText(toolDesc)}`);
+      if (schema !== undefined) {
         lines.push("input_schema:");
-        lines.push(readableStringify(tool.input_schema));
+        lines.push(readableStringify(schema));
       }
       return lines.join("\n");
     }
@@ -544,8 +593,9 @@
         }
         if (tools.length > 0) {
           tools.forEach((tool, idx) => {
+            const toolName = tool?.name ?? tool?.function?.name ?? "unnamed";
             items.push({
-              title: `[tool] #${idx + 1}  ${tool?.name ?? "unnamed"}`,
+              title: `[tool] #${idx + 1}  ${toolName}`,
               role: "tool",
               content: formatAnthropicTool(tool),
               reasoning: ""

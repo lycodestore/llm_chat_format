@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAI Tool Call 解析器</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #fff;
+      --border: #dbe3ef;
+      --text: #172033;
+      --muted: #5f6b85;
+      --primary: #245bdb;
+      --tool: #b35b00;
+      --error-bg: #fff3f1;
+      --error-text: #a93a32;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .container {
+      width: 96vw;
+      margin: 0 auto;
+      padding: 12px 16px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0 16px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      min-height: 620px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel h2 {
+      margin: 0;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+    }
+
+    textarea {
+      width: 100%;
+      flex: 1;
+      border: 0;
+      outline: none;
+      resize: none;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .output {
+      padding: 12px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .block {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .block-label {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      background: #f9fbff;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 10px;
+      line-height: 1.6;
+    }
+
+    .tool-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .tool-head {
+      background: var(--tool);
+      color: #fff;
+      font-size: 12px;
+      padding: 7px 10px;
+      font-weight: 600;
+    }
+
+    .section-title {
+      padding: 8px 10px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 8px 10px 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      line-height: 1.55;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .error {
+      display: none;
+      color: var(--error-text);
+      background: var(--error-bg);
+      border-top: 1px solid #f3c7c2;
+      padding: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .panel { min-height: 420px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>OpenAI Tool Call 解析器</h1>
+      <p>提供两套独立解析：Tool Call 列表解析、转义换行还原（互不影响）。</p>
+    </header>
+
+    <section class="toolbar">
+      <button id="btnFormat" class="primary">解析 Tool Call</button>
+      <button id="btnCopy">复制右侧结果</button>
+      <button id="btnClear">清空</button>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Tool Call 原始输入</h2>
+        <textarea id="toolInputText" placeholder='在这里粘贴类似 [{"function":{"name":"edit","arguments":"{\"a\":1}"}}] 的文本...'></textarea>
+      </article>
+
+      <article class="panel">
+        <h2>Tool Call 解析结果</h2>
+        <div class="output">
+          <div class="block">
+            <div class="block-label">工具调用列表</div>
+            <div id="toolList"></div>
+          </div>
+        </div>
+        <div id="errorBox" class="error"></div>
+      </article>
+    </section>
+
+    <section class="grid" style="margin-top:14px;">
+      <article class="panel">
+        <h2>换行还原输入</h2>
+        <textarea id="decodeInputText" placeholder="在这里粘贴包含 \\n 的文本..."></textarea>
+      </article>
+
+      <article class="panel">
+        <h2>换行还原结果</h2>
+        <div class="output">
+          <div class="block">
+            <div class="block-label">转义换行预览（\\n -> 换行）</div>
+            <pre id="decodedText"></pre>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const toolInputEl = document.getElementById("toolInputText");
+    const decodeInputEl = document.getElementById("decodeInputText");
+    const toolListEl = document.getElementById("toolList");
+    const decodedTextEl = document.getElementById("decodedText");
+    const errorBoxEl = document.getElementById("errorBox");
+
+    function decodeEscapedText(text) {
+      if (!text) return "";
+      let t = String(text);
+      t = t.replace(/\\r\\n/g, "\n");
+      t = t.replace(/\\n/g, "\n");
+      t = t.replace(/\\r/g, "\r");
+      t = t.replace(/\\t/g, "\t");
+      t = t.replace(/\\"/g, "\"");
+      t = t.replace(/\\\\/g, "\\");
+      return t;
+    }
+
+    function parseMaybeJson(text) {
+      const raw = (text || "").trim();
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        const start = raw.indexOf("[");
+        const end = raw.lastIndexOf("]");
+        if (start >= 0 && end > start) {
+          const fragment = raw.slice(start, end + 1);
+          return JSON.parse(fragment);
+        }
+        throw new Error("不是合法 JSON 或未找到数组内容。");
+      }
+    }
+
+    function normalizeCalls(data) {
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.tool_calls)) return data.tool_calls;
+      if (data && data.function && data.type === "function") return [data];
+      return [];
+    }
+
+    function parseArguments(value) {
+      if (value === undefined || value === null || value === "") return "(empty)";
+      if (typeof value === "object") return JSON.stringify(value, null, 2);
+      if (typeof value !== "string") return String(value);
+      try {
+        const parsed = JSON.parse(value);
+        return JSON.stringify(parsed, null, 2);
+      } catch (_) {
+        return value;
+      }
+    }
+
+    function renderCalls(calls) {
+      toolListEl.innerHTML = "";
+      if (!calls.length) {
+        toolListEl.innerHTML = '<div class="hint">未检测到工具调用，请确认输入是 OpenAI tool_call 数组。</div>';
+        return;
+      }
+
+      calls.forEach((call, index) => {
+        const fn = call && call.function && typeof call.function === "object" ? call.function : {};
+        const id = call?.id || "-";
+        const type = call?.type || "function";
+        const name = fn?.name || call?.name || "unnamed";
+        const argsText = parseArguments(fn?.arguments ?? call?.arguments);
+
+        const item = document.createElement("div");
+        item.className = "tool-item";
+
+        const head = document.createElement("div");
+        head.className = "tool-head";
+        head.textContent = `#${index + 1} ${name}`;
+
+        const metaTitle = document.createElement("div");
+        metaTitle.className = "section-title";
+        metaTitle.textContent = "meta";
+        const metaPre = document.createElement("pre");
+        metaPre.textContent = `id: ${id}\ntype: ${type}\nname: ${name}`;
+
+        const argsTitle = document.createElement("div");
+        argsTitle.className = "section-title";
+        argsTitle.textContent = "arguments";
+        const argsPre = document.createElement("pre");
+        argsPre.textContent = argsText;
+
+        item.appendChild(head);
+        item.appendChild(metaTitle);
+        item.appendChild(metaPre);
+        item.appendChild(argsTitle);
+        item.appendChild(argsPre);
+        toolListEl.appendChild(item);
+      });
+    }
+
+    function getCopyText() {
+      const blocks = Array.from(toolListEl.querySelectorAll(".tool-item")).map((item) => {
+        const head = item.querySelector(".tool-head")?.textContent || "";
+        const sections = Array.from(item.querySelectorAll(".section-title")).map((s) => s.textContent || "");
+        const pres = Array.from(item.querySelectorAll("pre")).map((p) => p.textContent || "");
+        const lines = [head];
+        sections.forEach((sec, i) => {
+          lines.push(`${sec}:\n${pres[i] || ""}`);
+        });
+        return lines.join("\n\n");
+      });
+      if (!blocks.length) return "暂无可复制的工具调用内容。";
+      return blocks.join("\n\n");
+    }
+
+    function formatToolInput() {
+      const raw = toolInputEl.value || "";
+      errorBoxEl.style.display = "none";
+      errorBoxEl.textContent = "";
+      if (!raw.trim()) {
+        toolListEl.innerHTML = '<div class="hint">请在左侧粘贴 OpenAI tool_call 文本。</div>';
+        return;
+      }
+
+      try {
+        const parsed = parseMaybeJson(raw);
+        const calls = normalizeCalls(parsed);
+        renderCalls(calls);
+      } catch (err) {
+        toolListEl.innerHTML = '<div class="hint">无法解析，请检查 JSON 格式。</div>';
+        errorBoxEl.style.display = "block";
+        errorBoxEl.textContent = `解析失败：${err.message}`;
+      }
+    }
+
+    function formatDecodeInput() {
+      const raw = decodeInputEl.value || "";
+      decodedTextEl.textContent = decodeEscapedText(raw);
+    }
+
+    function copyOutput() {
+      navigator.clipboard.writeText(getCopyText()).catch(() => {
+        errorBoxEl.style.display = "block";
+        errorBoxEl.textContent = "复制失败，请手动复制右侧内容。";
+      });
+    }
+
+    document.getElementById("btnFormat").addEventListener("click", formatToolInput);
+    document.getElementById("btnClear").addEventListener("click", () => {
+      toolInputEl.value = "";
+      decodeInputEl.value = "";
+      formatToolInput();
+      formatDecodeInput();
+    });
+    document.getElementById("btnCopy").addEventListener("click", copyOutput);
+    toolInputEl.addEventListener("input", formatToolInput);
+    decodeInputEl.addEventListener("input", formatDecodeInput);
+
+    formatToolInput();
+    formatDecodeInput();
+  </script>
+</body>
+</html>

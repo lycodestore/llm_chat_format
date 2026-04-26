@@ -416,10 +416,14 @@
       if (Array.isArray(parsed.messages)) {
         parsed.messages.forEach((item, idx) => {
           const role = item && typeof item.role === "string" ? item.role : "unknown";
+          let content = normalizeContent(item?.content);
+          if ((!content || !content.trim()) && Array.isArray(item?.tool_calls) && item.tool_calls.length > 0) {
+            content = readableStringify(item.tool_calls);
+          }
           items.push({
             title: `#${idx + 1}  ${role}`,
             role,
-            content: normalizeContent(item?.content),
+            content,
             reasoning: normalizeContent(item?.reasoning_content)
           });
         });

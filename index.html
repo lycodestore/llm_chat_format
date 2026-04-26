@@ -176,6 +176,34 @@
       padding: 8px 10px 0;
     }
 
+    .msg-section-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px 0;
+    }
+
+    .msg-section-title-row .msg-section-title {
+      padding: 0;
+    }
+
+    .copy-step-btn {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .copy-step-btn:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
     .meta {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -673,12 +701,36 @@
 
         const contentSection = document.createElement("div");
         contentSection.className = "msg-section";
+        const titleRow = document.createElement("div");
+        titleRow.className = "msg-section-title-row";
         const contentTitle = document.createElement("div");
         contentTitle.className = "msg-section-title";
         contentTitle.textContent = "content";
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "copy-step-btn";
+        copyBtn.type = "button";
+        copyBtn.textContent = "复制 content";
+        const contentText = item.content || "(empty)";
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(contentText).then(
+            () => {
+              const oldText = copyBtn.textContent;
+              copyBtn.textContent = "已复制";
+              setTimeout(() => {
+                copyBtn.textContent = oldText;
+              }, 700);
+            },
+            () => {
+              errorBoxEl.style.display = "block";
+              errorBoxEl.textContent = "复制失败，请手动复制 content。";
+            }
+          );
+        });
         const contentPre = document.createElement("pre");
-        contentPre.textContent = item.content || "(empty)";
-        contentSection.appendChild(contentTitle);
+        contentPre.textContent = contentText;
+        titleRow.appendChild(contentTitle);
+        titleRow.appendChild(copyBtn);
+        contentSection.appendChild(titleRow);
         contentSection.appendChild(contentPre);
 
         wrapper.appendChild(header);

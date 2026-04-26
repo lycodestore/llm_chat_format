@@ -1,0 +1,532 @@
+[2026-04-26 16:14:17] POST /chat/completions
+Duration: 3.2710828s | Status: 200
+--- Request Body ---
+{
+  "model": "deepseek-v4-flash",
+  "max_tokens": 32000,
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are opencode, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.\n\nIMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with programming. You may use URLs provided by the user in their messages or local files.\n\nIf the user asks for help or wants to give feedback inform them of the following:\n- /help: Get help with using opencode\n- To give feedback, users should report the issue at https://github.com/anomalyco/opencode/issues\n\nWhen the user directly asks about opencode (eg 'can opencode do...', 'does opencode have...') or asks in second person (eg 'are you able...', 'can you do...'), first use the WebFetch tool to gather information to answer the question from opencode docs at https://opencode.ai\n\n# Tone and style\nYou should be concise, direct, and to the point. When you run a non-trivial bash command, you should explain what the command does and why you are running it, to make sure the user understands what you are doing (this is especially important when you are running a command that will make changes to the user's system).\nRemember that your output will be displayed on a command line interface. Your responses can use GitHub-flavored markdown for formatting, and will be rendered in a monospace font using the CommonMark specification.\nOutput text to communicate with the user; all text you output outside of tool use is displayed to the user. Only use tools to complete tasks. Never use tools like Bash or code comments as means to communicate with the user during the session.\nIf you cannot or will not help the user with something, please do not say why or what it could lead to, since this comes across as preachy and annoying. Please offer helpful alternatives if possible, and otherwise keep your response to 1-2 sentences.\nOnly use emojis if the user explicitly requests it. Avoid using emojis in all communication unless asked.\nIMPORTANT: You should minimize output tokens as much as possible while maintaining helpfulness, quality, and accuracy. Only address the specific query or task at hand, avoiding tangential information unless absolutely critical for completing the request. If you can answer in 1-3 sentences or a short paragraph, please do.\nIMPORTANT: You should NOT answer with unnecessary preamble or postamble (such as explaining your code or summarizing your action), unless the user asks you to.\nIMPORTANT: Keep your responses short, since they will be displayed on a command line interface. You MUST answer concisely with fewer than 4 lines (not including tool use or code generation), unless user asks for detail. Answer the user's question directly, without elaboration, explanation, or details. One word answers are best. Avoid introductions, conclusions, and explanations. You MUST avoid text before/after your response, such as \"The answer is <answer>.\", \"Here is the content of the file...\" or \"Based on the information provided, the answer is...\" or \"Here is what I will do next...\". Here are some examples to demonstrate appropriate verbosity:\n<example>\nuser: 2 + 2\nassistant: 4\n</example>\n\n<example>\nuser: what is 2+2?\nassistant: 4\n</example>\n\n<example>\nuser: is 11 a prime number?\nassistant: Yes\n</example>\n\n<example>\nuser: what command should I run to list files in the current directory?\nassistant: ls\n</example>\n\n<example>\nuser: what command should I run to watch files in the current directory?\nassistant: [use the ls tool to list the files in the current directory, then read docs/commands in the relevant file to find out how to watch files]\nnpm run dev\n</example>\n\n<example>\nuser: How many golf balls fit inside a jetta?\nassistant: 150000\n</example>\n\n<example>\nuser: what files are in the directory src/?\nassistant: [runs ls and sees foo.c, bar.c, baz.c]\nuser: which file contains the implementation of foo?\nassistant: src/foo.c\n</example>\n\n<example>\nuser: write tests for new feature\nassistant: [uses grep and glob search tools to find where similar tests are defined, uses concurrent read file tool use blocks in one tool call to read relevant files at the same time, uses edit file tool to write new tests]\n</example>\n\n# Proactiveness\nYou are allowed to be proactive, but only when the user asks you to do something. You should strive to strike a balance between:\n1. Doing the right thing when asked, including taking actions and follow-up actions\n2. Not surprising the user with actions you take without asking\nFor example, if the user asks you how to approach something, you should do your best to answer their question first, and not immediately jump into taking actions.\n3. Do not add additional code explanation summary unless requested by the user. After working on a file, just stop, rather than providing an explanation of what you did.\n\n# Following conventions\nWhen making changes to files, first understand the file's code conventions. Mimic code style, use existing libraries and utilities, and follow existing patterns.\n- NEVER assume that a given library is available, even if it is well known. Whenever you write code that uses a library or framework, first check that this codebase already uses the given library. For example, you might look at neighboring files, or check the package.json (or cargo.toml, and so on depending on the language).\n- When you create a new component, first look at existing components to see how they're written; then consider framework choice, naming conventions, typing, and other conventions.\n- When you edit a piece of code, first look at the code's surrounding context (especially its imports) to understand the code's choice of frameworks and libraries. Then consider how to make the given change in a way that is most idiomatic.\n- Always follow security best practices. Never introduce code that exposes or logs secrets and keys. Never commit secrets or keys to the repository.\n\n# Code style\n- IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked\n\n# Doing tasks\nThe user will primarily request you perform software engineering tasks. This includes solving bugs, adding new functionality, refactoring code, explaining code, and more. For these tasks the following steps are recommended:\n- Use the available search tools to understand the codebase and the user's query. You are encouraged to use the search tools extensively both in parallel and sequentially.\n- Implement the solution using all tools available to you\n- Verify the solution if possible with tests. NEVER assume specific test framework or test script. Check the README or search codebase to determine the testing approach.\n- VERY IMPORTANT: When you have completed a task, you MUST run the lint and typecheck commands (e.g. npm run lint, npm run typecheck, ruff, etc.) with Bash if they were provided to you to ensure your code is correct. If you are unable to find the correct command, ask the user for the command to run and if they supply it, proactively suggest writing it to AGENTS.md so that you will know to run it next time.\nNEVER commit changes unless the user explicitly asks you to. It is VERY IMPORTANT to only commit when explicitly asked, otherwise the user will feel that you are being too proactive.\n\n- Tool results and user messages may include <system-reminder> tags. <system-reminder> tags contain useful information and reminders. They are NOT part of the user's provided input or the tool result.\n\n# Tool usage policy\n- When doing file search, prefer to use the Task tool in order to reduce context usage.\n- You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. When making multiple bash tool calls, you MUST send a single message with multiple tools calls to run the calls in parallel. For example, if you need to run \"git status\" and \"git diff\", send a single message with two tool calls to run the calls in parallel.\n\nYou MUST answer concisely with fewer than 4 lines of text (not including tool use or code generation), unless user asks for detail.\n\nIMPORTANT: Before you begin work, think about what the code you're editing is supposed to do based on the filenames directory structure.\n\n# Code References\n\nWhen referencing specific functions or pieces of code include the pattern `file_path:line_number` to allow the user to easily navigate to the source code location.\n\n<example>\nuser: Where are errors from the client handled?\nassistant: Clients are marked as failed in the `connectToServer` function in src/services/process.ts:712.\n</example>\n\nYou are powered by the model named deepseek-v4-flash. The exact model ID is localdeepseek/deepseek-v4-flash\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: D:\\codes\\vibecoding\\compare\\opencode\n  Workspace root folder: /\n  Is directory a git repo: no\n  Platform: win32\n  Today's date: Sun Apr 26 2026\n</env>\n<directories>\n  \n</directories>\nSkills provide specialized instructions and workflows for specific tasks.\nUse the skill tool to load a skill when a task matches its description.\nNo skills are currently available."
+    },
+    {
+      "role": "user",
+      "content": "创建一个网页版的todo应用"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "reasoning_content": "The user wants me to create a web-based todo application. Let me first check what's in the current directory to understand the project structure.",
+      "tool_calls": [
+        {
+          "id": "call_00_A8U06VnbJtt7joEvJ3RqURB0",
+          "type": "function",
+          "function": {
+            "name": "read",
+            "arguments": "{\"filePath\":\"D:\\\\codes\\\\vibecoding\\\\compare\\\\opencode\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_00_A8U06VnbJtt7joEvJ3RqURB0",
+      "content": "<path>D:\\codes\\vibecoding\\compare\\opencode</path>\n<type>directory</type>\n<entries>\n\n\n(0 entries)\n</entries>"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "reasoning_content": "The directory is empty. I need to create a todo web application from scratch. Let me create a simple, clean todo app using vanilla HTML, CSS, and JavaScript - no frameworks needed for a simple todo app. I'll create it as a single HTML file since that's the simplest approach.\n\nLet me create a nice todo app with:\n1. Add todos\n2. Mark as complete\n3. Delete todos\n4. Local storage persistence\n5. Clean UI design",
+      "tool_calls": [
+        {
+          "id": "call_00_Pktee5OwMSIsjNVSP44fAPba",
+          "type": "function",
+          "function": {
+            "name": "write",
+            "arguments": "{\"filePath\":\"D:\\\\codes\\\\vibecoding\\\\compare\\\\opencode\\\\index.html\",\"content\":\"<!DOCTYPE html>\\n<html lang=\\\"zh-CN\\\">\\n<head>\\n  <meta charset=\\\"UTF-8\\\">\\n  <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\">\\n  <title>Todo App</title>\\n  <style>\\n    * { margin: 0; padding: 0; box-sizing: border-box; }\\n    body {\\n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\\n      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\\n      min-height: 100vh;\\n      display: flex;\\n      justify-content: center;\\n      padding: 40px 20px;\\n    }\\n    .container {\\n      background: #fff;\\n      border-radius: 16px;\\n      box-shadow: 0 20px 60px rgba(0,0,0,0.15);\\n      width: 100%;\\n      max-width: 520px;\\n      padding: 32px;\\n      height: fit-content;\\n    }\\n    h1 {\\n      font-size: 28px;\\n      color: #1a1a2e;\\n      margin-bottom: 24px;\\n      display: flex;\\n      align-items: center;\\n      gap: 10px;\\n    }\\n    h1 span { background: #667eea; color: #fff; font-size: 14px; padding: 2px 10px; border-radius: 12px; }\\n    .input-row {\\n      display: flex;\\n      gap: 10px;\\n      margin-bottom: 24px;\\n    }\\n    .input-row input {\\n      flex: 1;\\n      padding: 12px 16px;\\n      border: 2px solid #e0e0e0;\\n      border-radius: 10px;\\n      font-size: 15px;\\n      outline: none;\\n      transition: border 0.2s;\\n    }\\n    .input-row input:focus { border-color: #667eea; }\\n    .input-row button {\\n      padding: 12px 24px;\\n      background: #667eea;\\n      color: #fff;\\n      border: none;\\n      border-radius: 10px;\\n      font-size: 15px;\\n      cursor: pointer;\\n      transition: background 0.2s;\\n      white-space: nowrap;\\n    }\\n    .input-row button:hover { background: #5a6fd6; }\\n    .filters {\\n      display: flex;\\n      gap: 8px;\\n      margin-bottom: 20px;\\n    }\\n    .filters button {\\n      padding: 6px 16px;\\n      border: 1px solid #e0e0e0;\\n      border-radius: 20px;\\n      background: #fff;\\n      cursor: pointer;\\n      font-size: 13px;\\n      transition: all 0.2s;\\n    }\\n    .filters button:hover { border-color: #667eea; color: #667eea; }\\n    .filters button.active { background: #667eea; color: #fff; border-color: #667eea; }\\n    .todo-list { list-style: none; }\\n    .todo-item {\\n      display: flex;\\n      align-items: center;\\n      gap: 12px;\\n      padding: 12px 0;\\n      border-bottom: 1px solid #f0f0f0;\\n      animation: fadeIn 0.2s ease;\\n    }\\n    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }\\n    .todo-item .checkbox {\\n      width: 20px; height: 20px;\\n      border: 2px solid #ccc;\\n      border-radius: 50%;\\n      cursor: pointer;\\n      display: flex; align-items: center; justify-content: center;\\n      transition: all 0.2s;\\n      flex-shrink: 0;\\n    }\\n    .todo-item .checkbox.checked {\\n      background: #667eea;\\n      border-color: #667eea;\\n    }\\n    .todo-item .checkbox.checked::after {\\n      content: '✓';\\n      color: #fff;\\n      font-size: 12px;\\n      font-weight: bold;\\n    }\\n    .todo-item .text {\\n      flex: 1;\\n      font-size: 15px;\\n      color: #333;\\n      word-break: break-word;\\n    }\\n    .todo-item .text.completed { text-decoration: line-through; color: #aaa; }\\n    .todo-item .delete-btn {\\n      background: none;\\n      border: none;\\n      color: #ccc;\\n      cursor: pointer;\\n      font-size: 18px;\\n      padding: 4px;\\n      transition: color 0.2s;\\n    }\\n    .todo-item .delete-btn:hover { color: #e74c3c; }\\n    .footer {\\n      display: flex;\\n      justify-content: space-between;\\n      align-items: center;\\n      margin-top: 20px;\\n      padding-top: 16px;\\n      border-top: 1px solid #f0f0f0;\\n      font-size: 13px;\\n      color: #999;\\n    }\\n    .footer button {\\n      background: none;\\n      border: none;\\n      color: #e74c3c;\\n      cursor: pointer;\\n      font-size: 13px;\\n      padding: 4px 8px;\\n      border-radius: 6px;\\n      transition: background 0.2s;\\n    }\\n    .footer button:hover { background: #fdf0ef; }\\n    .empty-state {\\n      text-align: center;\\n      padding: 40px 0;\\n      color: #bbb;\\n    }\\n    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }\\n  </style>\\n</head>\\n<body>\\n  <div class=\\\"container\\\">\\n    <h1>Todo <span id=\\\"count\\\">0</span></h1>\\n\\n    <div class=\\\"input-row\\\">\\n      <input id=\\\"input\\\" type=\\\"text\\\" placeholder=\\\"Add a new task...\\\" autofocus>\\n      <button id=\\\"addBtn\\\">Add</button>\\n    </div>\\n\\n    <div class=\\\"filters\\\">\\n      <button class=\\\"active\\\" data-filter=\\\"all\\\">All</button>\\n      <button data-filter=\\\"active\\\">Active</button>\\n      <button data-filter=\\\"completed\\\">Completed</button>\\n    </div>\\n\\n    <ul class=\\\"todo-list\\\" id=\\\"todoList\\\"></ul>\\n\\n    <div class=\\\"footer\\\">\\n      <span id=\\\"remainCount\\\">0 items left</span>\\n      <button id=\\\"clearBtn\\\">Clear completed</button>\\n    </div>\\n  </div>\\n\\n  <script>\\n    const STORAGE_KEY = 'todos'\\n\\n    let todos = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []\\n    let filter = 'all'\\n\\n    const $ = id => document.getElementById(id)\\n    const input = $('input')\\n    const list = $('todoList')\\n    const count = $('count')\\n    const remain = $('remainCount')\\n\\n    function save() {\\n      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))\\n    }\\n\\n    function render() {\\n      const filtered = todos.filter(t => {\\n        if (filter === 'active') return !t.done\\n        if (filter === 'completed') return t.done\\n        return true\\n      })\\n\\n      if (filtered.length === 0) {\\n        list.innerHTML = `<div class=\\\"empty-state\\\"><div class=\\\"icon\\\">📋</div>No tasks ${filter === 'all' ? '' : filter}</div>`\\n      } else {\\n        list.innerHTML = filtered.map(t => `\\n          <li class=\\\"todo-item\\\" data-id=\\\"${t.id}\\\">\\n            <div class=\\\"checkbox ${t.done ? 'checked' : ''}\\\" onclick=\\\"toggle('${t.id}')\\\"></div>\\n            <span class=\\\"text ${t.done ? 'completed' : ''}\\\" ondblclick=\\\"edit('${t.id}')\\\">${escapeHtml(t.text)}</span>\\n            <button class=\\\"delete-btn\\\" onclick=\\\"remove('${t.id}')\\\">✕</button>\\n          </li>\\n        `).join('')\\n      }\\n\\n      const active = todos.filter(t => !t.done).length\\n      count.textContent = todos.length\\n      remain.textContent = `${active} item${active !== 1 ? 's' : ''} left`\\n\\n      document.querySelectorAll('.filters button').forEach(btn => {\\n        btn.classList.toggle('active', btn.dataset.filter === filter)\\n      })\\n    }\\n\\n    function escapeHtml(text) {\\n      const div = document.createElement('div')\\n      div.textContent = text\\n      return div.innerHTML\\n    }\\n\\n    function add() {\\n      const text = input.value.trim()\\n      if (!text) return\\n      todos.push({ id: Date.now().toString(), text, done: false })\\n      save(); render(); input.value = ''; input.focus()\\n    }\\n\\n    function toggle(id) {\\n      const t = todos.find(t => t.id === id)\\n      if (t) { t.done = !t.done; save(); render() }\\n    }\\n\\n    function remove(id) {\\n      todos = todos.filter(t => t.id !== id)\\n      save(); render(); input.focus()\\n    }\\n\\n    function edit(id) {\\n      const t = todos.find(t => t.id === id)\\n      if (!t || t.done) return\\n      const newText = prompt('Edit task:', t.text)\\n      if (newText && newText.trim()) {\\n        t.text = newText.trim()\\n        save(); render()\\n      }\\n    }\\n\\n    $('addBtn').addEventListener('click', add)\\n    input.addEventListener('keydown', e => { if (e.key === 'Enter') add() })\\n\\n    document.querySelectorAll('.filters button').forEach(btn => {\\n      btn.addEventListener('click', () => {\\n        filter = btn.dataset.filter\\n        render()\\n      })\\n    })\\n\\n    $('clearBtn').addEventListener('click', () => {\\n      todos = todos.filter(t => !t.done)\\n      save(); render()\\n    })\\n\\n    render()\\n  </script>\\n</body>\\n</html>\\n\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_00_Pktee5OwMSIsjNVSP44fAPba",
+      "content": "Wrote file successfully."
+    },
+    {
+      "role": "assistant",
+      "content": "Todo 应用已创建在 `index.html`，用浏览器打开即可使用。功能包括：\n\n- **添加任务** — 输入框 + Enter 键或点击 Add\n- **标记完成** — 点击圆形复选框\n- **删除任务** — 点击 ✕ 按钮\n- **双击编辑** — 双击任务文本修改（仅未完成的任务）\n- **筛选** — All / Active / Completed 三种视图\n- **清除已完成** — 一键清理\n- **数据持久化** — 使用 localStorage 自动保存",
+      "reasoning_content": "The file has been created. Let me provide a summary of what was built."
+    },
+    {
+      "role": "user",
+      "content": "样式太丑，美化一下"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "reasoning_content": "The user wants me to beautify the styling. Let me read the current file and then update the CSS to make it look much better.",
+      "tool_calls": [
+        {
+          "id": "call_00_OkTs1gqbVPCKHFj4TF9393y5",
+          "type": "function",
+          "function": {
+            "name": "read",
+            "arguments": "{\"filePath\":\"D:\\\\codes\\\\vibecoding\\\\compare\\\\opencode\\\\index.html\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_00_OkTs1gqbVPCKHFj4TF9393y5",
+      "content": "<path>D:\\codes\\vibecoding\\compare\\opencode\\index.html</path>\n<type>file</type>\n<content>1: <!DOCTYPE html>\n2: <html lang=\"zh-CN\">\n3: <head>\n4:   <meta charset=\"UTF-8\">\n5:   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n6:   <title>Todo App</title>\n7:   <style>\n8:     * { margin: 0; padding: 0; box-sizing: border-box; }\n9:     body {\n10:       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\n11:       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n12:       min-height: 100vh;\n13:       display: flex;\n14:       justify-content: center;\n15:       padding: 40px 20px;\n16:     }\n17:     .container {\n18:       background: #fff;\n19:       border-radius: 16px;\n20:       box-shadow: 0 20px 60px rgba(0,0,0,0.15);\n21:       width: 100%;\n22:       max-width: 520px;\n23:       padding: 32px;\n24:       height: fit-content;\n25:     }\n26:     h1 {\n27:       font-size: 28px;\n28:       color: #1a1a2e;\n29:       margin-bottom: 24px;\n30:       display: flex;\n31:       align-items: center;\n32:       gap: 10px;\n33:     }\n34:     h1 span { background: #667eea; color: #fff; font-size: 14px; padding: 2px 10px; border-radius: 12px; }\n35:     .input-row {\n36:       display: flex;\n37:       gap: 10px;\n38:       margin-bottom: 24px;\n39:     }\n40:     .input-row input {\n41:       flex: 1;\n42:       padding: 12px 16px;\n43:       border: 2px solid #e0e0e0;\n44:       border-radius: 10px;\n45:       font-size: 15px;\n46:       outline: none;\n47:       transition: border 0.2s;\n48:     }\n49:     .input-row input:focus { border-color: #667eea; }\n50:     .input-row button {\n51:       padding: 12px 24px;\n52:       background: #667eea;\n53:       color: #fff;\n54:       border: none;\n55:       border-radius: 10px;\n56:       font-size: 15px;\n57:       cursor: pointer;\n58:       transition: background 0.2s;\n59:       white-space: nowrap;\n60:     }\n61:     .input-row button:hover { background: #5a6fd6; }\n62:     .filters {\n63:       display: flex;\n64:       gap: 8px;\n65:       margin-bottom: 20px;\n66:     }\n67:     .filters button {\n68:       padding: 6px 16px;\n69:       border: 1px solid #e0e0e0;\n70:       border-radius: 20px;\n71:       background: #fff;\n72:       cursor: pointer;\n73:       font-size: 13px;\n74:       transition: all 0.2s;\n75:     }\n76:     .filters button:hover { border-color: #667eea; color: #667eea; }\n77:     .filters button.active { background: #667eea; color: #fff; border-color: #667eea; }\n78:     .todo-list { list-style: none; }\n79:     .todo-item {\n80:       display: flex;\n81:       align-items: center;\n82:       gap: 12px;\n83:       padding: 12px 0;\n84:       border-bottom: 1px solid #f0f0f0;\n85:       animation: fadeIn 0.2s ease;\n86:     }\n87:     @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }\n88:     .todo-item .checkbox {\n89:       width: 20px; height: 20px;\n90:       border: 2px solid #ccc;\n91:       border-radius: 50%;\n92:       cursor: pointer;\n93:       display: flex; align-items: center; justify-content: center;\n94:       transition: all 0.2s;\n95:       flex-shrink: 0;\n96:     }\n97:     .todo-item .checkbox.checked {\n98:       background: #667eea;\n99:       border-color: #667eea;\n100:     }\n101:     .todo-item .checkbox.checked::after {\n102:       content: '✓';\n103:       color: #fff;\n104:       font-size: 12px;\n105:       font-weight: bold;\n106:     }\n107:     .todo-item .text {\n108:       flex: 1;\n109:       font-size: 15px;\n110:       color: #333;\n111:       word-break: break-word;\n112:     }\n113:     .todo-item .text.completed { text-decoration: line-through; color: #aaa; }\n114:     .todo-item .delete-btn {\n115:       background: none;\n116:       border: none;\n117:       color: #ccc;\n118:       cursor: pointer;\n119:       font-size: 18px;\n120:       padding: 4px;\n121:       transition: color 0.2s;\n122:     }\n123:     .todo-item .delete-btn:hover { color: #e74c3c; }\n124:     .footer {\n125:       display: flex;\n126:       justify-content: space-between;\n127:       align-items: center;\n128:       margin-top: 20px;\n129:       padding-top: 16px;\n130:       border-top: 1px solid #f0f0f0;\n131:       font-size: 13px;\n132:       color: #999;\n133:     }\n134:     .footer button {\n135:       background: none;\n136:       border: none;\n137:       color: #e74c3c;\n138:       cursor: pointer;\n139:       font-size: 13px;\n140:       padding: 4px 8px;\n141:       border-radius: 6px;\n142:       transition: background 0.2s;\n143:     }\n144:     .footer button:hover { background: #fdf0ef; }\n145:     .empty-state {\n146:       text-align: center;\n147:       padding: 40px 0;\n148:       color: #bbb;\n149:     }\n150:     .empty-state .icon { font-size: 48px; margin-bottom: 12px; }\n151:   </style>\n152: </head>\n153: <body>\n154:   <div class=\"container\">\n155:     <h1>Todo <span id=\"count\">0</span></h1>\n156: \n157:     <div class=\"input-row\">\n158:       <input id=\"input\" type=\"text\" placeholder=\"Add a new task...\" autofocus>\n159:       <button id=\"addBtn\">Add</button>\n160:     </div>\n161: \n162:     <div class=\"filters\">\n163:       <button class=\"active\" data-filter=\"all\">All</button>\n164:       <button data-filter=\"active\">Active</button>\n165:       <button data-filter=\"completed\">Completed</button>\n166:     </div>\n167: \n168:     <ul class=\"todo-list\" id=\"todoList\"></ul>\n169: \n170:     <div class=\"footer\">\n171:       <span id=\"remainCount\">0 items left</span>\n172:       <button id=\"clearBtn\">Clear completed</button>\n173:     </div>\n174:   </div>\n175: \n176:   <script>\n177:     const STORAGE_KEY = 'todos'\n178: \n179:     let todos = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []\n180:     let filter = 'all'\n181: \n182:     const $ = id => document.getElementById(id)\n183:     const input = $('input')\n184:     const list = $('todoList')\n185:     const count = $('count')\n186:     const remain = $('remainCount')\n187: \n188:     function save() {\n189:       localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))\n190:     }\n191: \n192:     function render() {\n193:       const filtered = todos.filter(t => {\n194:         if (filter === 'active') return !t.done\n195:         if (filter === 'completed') return t.done\n196:         return true\n197:       })\n198: \n199:       if (filtered.length === 0) {\n200:         list.innerHTML = `<div class=\"empty-state\"><div class=\"icon\">📋</div>No tasks ${filter === 'all' ? '' : filter}</div>`\n201:       } else {\n202:         list.innerHTML = filtered.map(t => `\n203:           <li class=\"todo-item\" data-id=\"${t.id}\">\n204:             <div class=\"checkbox ${t.done ? 'checked' : ''}\" onclick=\"toggle('${t.id}')\"></div>\n205:             <span class=\"text ${t.done ? 'completed' : ''}\" ondblclick=\"edit('${t.id}')\">${escapeHtml(t.text)}</span>\n206:             <button class=\"delete-btn\" onclick=\"remove('${t.id}')\">✕</button>\n207:           </li>\n208:         `).join('')\n209:       }\n210: \n211:       const active = todos.filter(t => !t.done).length\n212:       count.textContent = todos.length\n213:       remain.textContent = `${active} item${active !== 1 ? 's' : ''} left`\n214: \n215:       document.querySelectorAll('.filters button').forEach(btn => {\n216:         btn.classList.toggle('active', btn.dataset.filter === filter)\n217:       })\n218:     }\n219: \n220:     function escapeHtml(text) {\n221:       const div = document.createElement('div')\n222:       div.textContent = text\n223:       return div.innerHTML\n224:     }\n225: \n226:     function add() {\n227:       const text = input.value.trim()\n228:       if (!text) return\n229:       todos.push({ id: Date.now().toString(), text, done: false })\n230:       save(); render(); input.value = ''; input.focus()\n231:     }\n232: \n233:     function toggle(id) {\n234:       const t = todos.find(t => t.id === id)\n235:       if (t) { t.done = !t.done; save(); render() }\n236:     }\n237: \n238:     function remove(id) {\n239:       todos = todos.filter(t => t.id !== id)\n240:       save(); render(); input.focus()\n241:     }\n242: \n243:     function edit(id) {\n244:       const t = todos.find(t => t.id === id)\n245:       if (!t || t.done) return\n246:       const newText = prompt('Edit task:', t.text)\n247:       if (newText && newText.trim()) {\n248:         t.text = newText.trim()\n249:         save(); render()\n250:       }\n251:     }\n252: \n253:     $('addBtn').addEventListener('click', add)\n254:     input.addEventListener('keydown', e => { if (e.key === 'Enter') add() })\n255: \n256:     document.querySelectorAll('.filters button').forEach(btn => {\n257:       btn.addEventListener('click', () => {\n258:         filter = btn.dataset.filter\n259:         render()\n260:       })\n261:     })\n262: \n263:     $('clearBtn').addEventListener('click', () => {\n264:       todos = todos.filter(t => !t.done)\n265:       save(); render()\n266:     })\n267: \n268:     render()\n269:   </script>\n270: </body>\n271: </html>\n\n(End of file - total 271 lines)\n</content>"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "reasoning_content": "Let me completely redesign the CSS to make it look modern and beautiful. I'll go with a more polished, modern aesthetic - think things like:\n- A warm, modern color palette\n- Gradient background with more depth\n- Glass-morphism or soft shadows for the container\n- Smooth animations and transitions\n- Better typography\n- Nicer checkbox animations\n- Hover effects on todo items\n- A more polished look overall\n\nLet me redesign the entire style section.",
+      "tool_calls": [
+        {
+          "id": "call_00_GyFYGTUh0uBpUX4FQMdpLSFh",
+          "type": "function",
+          "function": {
+            "name": "edit",
+            "arguments": "{\"filePath\":\"D:\\\\codes\\\\vibecoding\\\\compare\\\\opencode\\\\index.html\",\"oldString\":\"  <style>\\n    * { margin: 0; padding: 0; box-sizing: border-box; }\\n    body {\\n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\\n      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\\n      min-height: 100vh;\\n      display: flex;\\n      justify-content: center;\\n      padding: 40px 20px;\\n    }\\n    .container {\\n      background: #fff;\\n      border-radius: 16px;\\n      box-shadow: 0 20px 60px rgba(0,0,0,0.15);\\n      width: 100%;\\n      max-width: 520px;\\n      padding: 32px;\\n      height: fit-content;\\n    }\\n    h1 {\\n      font-size: 28px;\\n      color: #1a1a2e;\\n      margin-bottom: 24px;\\n      display: flex;\\n      align-items: center;\\n      gap: 10px;\\n    }\\n    h1 span { background: #667eea; color: #fff; font-size: 14px; padding: 2px 10px; border-radius: 12px; }\\n    .input-row {\\n      display: flex;\\n      gap: 10px;\\n      margin-bottom: 24px;\\n    }\\n    .input-row input {\\n      flex: 1;\\n      padding: 12px 16px;\\n      border: 2px solid #e0e0e0;\\n      border-radius: 10px;\\n      font-size: 15px;\\n      outline: none;\\n      transition: border 0.2s;\\n    }\\n    .input-row input:focus { border-color: #667eea; }\\n    .input-row button {\\n      padding: 12px 24px;\\n      background: #667eea;\\n      color: #fff;\\n      border: none;\\n      border-radius: 10px;\\n      font-size: 15px;\\n      cursor: pointer;\\n      transition: background 0.2s;\\n      white-space: nowrap;\\n    }\\n    .input-row button:hover { background: #5a6fd6; }\\n    .filters {\\n      display: flex;\\n      gap: 8px;\\n      margin-bottom: 20px;\\n    }\\n    .filters button {\\n      padding: 6px 16px;\\n      border: 1px solid #e0e0e0;\\n      border-radius: 20px;\\n      background: #fff;\\n      cursor: pointer;\\n      font-size: 13px;\\n      transition: all 0.2s;\\n    }\\n    .filters button:hover { border-color: #667eea; color: #667eea; }\\n    .filters button.active { background: #667eea; color: #fff; border-color: #667eea; }\\n    .todo-list { list-style: none; }\\n    .todo-item {\\n      display: flex;\\n      align-items: center;\\n      gap: 12px;\\n      padding: 12px 0;\\n      border-bottom: 1px solid #f0f0f0;\\n      animation: fadeIn 0.2s ease;\\n    }\\n    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }\\n    .todo-item .checkbox {\\n      width: 20px; height: 20px;\\n      border: 2px solid #ccc;\\n      border-radius: 50%;\\n      cursor: pointer;\\n      display: flex; align-items: center; justify-content: center;\\n      transition: all 0.2s;\\n      flex-shrink: 0;\\n    }\\n    .todo-item .checkbox.checked {\\n      background: #667eea;\\n      border-color: #667eea;\\n    }\\n    .todo-item .checkbox.checked::after {\\n      content: '✓';\\n      color: #fff;\\n      font-size: 12px;\\n      font-weight: bold;\\n    }\\n    .todo-item .text {\\n      flex: 1;\\n      font-size: 15px;\\n      color: #333;\\n      word-break: break-word;\\n    }\\n    .todo-item .text.completed { text-decoration: line-through; color: #aaa; }\\n    .todo-item .delete-btn {\\n      background: none;\\n      border: none;\\n      color: #ccc;\\n      cursor: pointer;\\n      font-size: 18px;\\n      padding: 4px;\\n      transition: color 0.2s;\\n    }\\n    .todo-item .delete-btn:hover { color: #e74c3c; }\\n    .footer {\\n      display: flex;\\n      justify-content: space-between;\\n      align-items: center;\\n      margin-top: 20px;\\n      padding-top: 16px;\\n      border-top: 1px solid #f0f0f0;\\n      font-size: 13px;\\n      color: #999;\\n    }\\n    .footer button {\\n      background: none;\\n      border: none;\\n      color: #e74c3c;\\n      cursor: pointer;\\n      font-size: 13px;\\n      padding: 4px 8px;\\n      border-radius: 6px;\\n      transition: background 0.2s;\\n    }\\n    .footer button:hover { background: #fdf0ef; }\\n    .empty-state {\\n      text-align: center;\\n      padding: 40px 0;\\n      color: #bbb;\\n    }\\n    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }\\n  </style>\",\"newString\":\"  <style>\\n    * { margin: 0; padding: 0; box-sizing: border-box; }\\n    body {\\n      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\\n      background: linear-gradient(145deg, #0f0c29 0%, #302b63 50%, #24243e 100%);\\n      min-height: 100vh;\\n      display: flex;\\n      justify-content: center;\\n      align-items: flex-start;\\n      padding: 60px 20px;\\n    }\\n    .container {\\n      background: rgba(255,255,255,0.06);\\n      backdrop-filter: blur(24px);\\n      -webkit-backdrop-filter: blur(24px);\\n      border: 1px solid rgba(255,255,255,0.1);\\n      border-radius: 24px;\\n      box-shadow: 0 25px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);\\n      width: 100%;\\n      max-width: 540px;\\n      padding: 36px;\\n      height: fit-content;\\n    }\\n    h1 {\\n      font-size: 32px;\\n      font-weight: 700;\\n      letter-spacing: -0.5px;\\n      color: #fff;\\n      margin-bottom: 28px;\\n      display: flex;\\n      align-items: center;\\n      gap: 12px;\\n    }\\n    h1 span {\\n      background: linear-gradient(135deg, #a78bfa, #6366f1);\\n      color: #fff;\\n      font-size: 13px;\\n      font-weight: 600;\\n      padding: 3px 12px;\\n      border-radius: 20px;\\n      box-shadow: 0 2px 12px rgba(99,102,241,0.4);\\n    }\\n    .input-row {\\n      display: flex;\\n      gap: 10px;\\n      margin-bottom: 28px;\\n    }\\n    .input-row input {\\n      flex: 1;\\n      padding: 14px 18px;\\n      background: rgba(255,255,255,0.07);\\n      border: 1.5px solid rgba(255,255,255,0.08);\\n      border-radius: 14px;\\n      font-size: 15px;\\n      color: #fff;\\n      outline: none;\\n      transition: all 0.25s;\\n    }\\n    .input-row input::placeholder { color: rgba(255,255,255,0.3); }\\n    .input-row input:focus {\\n      border-color: rgba(167,139,250,0.5);\\n      background: rgba(255,255,255,0.1);\\n      box-shadow: 0 0 0 4px rgba(167,139,250,0.1);\\n    }\\n    .input-row button {\\n      padding: 14px 28px;\\n      background: linear-gradient(135deg, #a78bfa, #6366f1);\\n      color: #fff;\\n      border: none;\\n      border-radius: 14px;\\n      font-size: 15px;\\n      font-weight: 600;\\n      cursor: pointer;\\n      transition: all 0.25s;\\n      white-space: nowrap;\\n      box-shadow: 0 4px 16px rgba(99,102,241,0.3);\\n    }\\n    .input-row button:hover {\\n      transform: translateY(-1px);\\n      box-shadow: 0 6px 24px rgba(99,102,241,0.45);\\n    }\\n    .input-row button:active { transform: translateY(0); }\\n    .filters {\\n      display: flex;\\n      gap: 6px;\\n      margin-bottom: 20px;\\n      background: rgba(255,255,255,0.04);\\n      border-radius: 12px;\\n      padding: 4px;\\n    }\\n    .filters button {\\n      flex: 1;\\n      padding: 8px 12px;\\n      border: none;\\n      border-radius: 10px;\\n      background: transparent;\\n      color: rgba(255,255,255,0.45);\\n      cursor: pointer;\\n      font-size: 13px;\\n      font-weight: 500;\\n      transition: all 0.25s;\\n    }\\n    .filters button:hover { color: rgba(255,255,255,0.8); }\\n    .filters button.active {\\n      background: rgba(167,139,250,0.2);\\n      color: #c4b5fd;\\n      box-shadow: 0 1px 8px rgba(167,139,250,0.15);\\n    }\\n    .todo-list { list-style: none; }\\n    .todo-item {\\n      display: flex;\\n      align-items: center;\\n      gap: 14px;\\n      padding: 14px 16px;\\n      margin: 0 -16px;\\n      border-radius: 14px;\\n      transition: all 0.2s;\\n      animation: slideIn 0.25s ease;\\n    }\\n    .todo-item:hover { background: rgba(255,255,255,0.04); }\\n    @keyframes slideIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }\\n    .todo-item .checkbox {\\n      width: 22px; height: 22px;\\n      border: 2px solid rgba(255,255,255,0.2);\\n      border-radius: 50%;\\n      cursor: pointer;\\n      display: flex; align-items: center; justify-content: center;\\n      transition: all 0.3s;\\n      flex-shrink: 0;\\n      position: relative;\\n    }\\n    .todo-item .checkbox:hover { border-color: rgba(167,139,250,0.6); }\\n    .todo-item .checkbox.checked {\\n      background: linear-gradient(135deg, #a78bfa, #6366f1);\\n      border-color: transparent;\\n      box-shadow: 0 2px 12px rgba(99,102,241,0.4);\\n    }\\n    .todo-item .checkbox.checked::after {\\n      content: '✓';\\n      color: #fff;\\n      font-size: 12px;\\n      font-weight: 700;\\n    }\\n    .todo-item .text {\\n      flex: 1;\\n      font-size: 15px;\\n      color: rgba(255,255,255,0.85);\\n      word-break: break-word;\\n      line-height: 1.5;\\n    }\\n    .todo-item .text.completed { text-decoration: line-through; color: rgba(255,255,255,0.25); }\\n    .todo-item .delete-btn {\\n      background: none;\\n      border: none;\\n      color: rgba(255,255,255,0.15);\\n      cursor: pointer;\\n      font-size: 14px;\\n      padding: 6px;\\n      border-radius: 8px;\\n      transition: all 0.2s;\\n      opacity: 0;\\n    }\\n    .todo-item:hover .delete-btn { opacity: 1; }\\n    .todo-item .delete-btn:hover { color: #f87171; background: rgba(248,113,113,0.1); }\\n    .footer {\\n      display: flex;\\n      justify-content: space-between;\\n      align-items: center;\\n      margin-top: 24px;\\n      padding-top: 20px;\\n      border-top: 1px solid rgba(255,255,255,0.06);\\n      font-size: 13px;\\n      color: rgba(255,255,255,0.35);\\n    }\\n    .footer button {\\n      background: none;\\n      border: none;\\n      color: rgba(248,113,113,0.7);\\n      cursor: pointer;\\n      font-size: 13px;\\n      font-weight: 500;\\n      padding: 6px 12px;\\n      border-radius: 8px;\\n      transition: all 0.2s;\\n    }\\n    .footer button:hover { color: #f87171; background: rgba(248,113,113,0.1); }\\n    .empty-state {\\n      text-align: center;\\n      padding: 48px 0 40px;\\n      color: rgba(255,255,255,0.2);\\n    }\\n    .empty-state .icon {\\n      font-size: 48px;\\n      margin-bottom: 12px;\\n      opacity: 0.6;\\n    }\\n    .empty-state p { font-size: 14px; }\\n  </style>\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_00_GyFYGTUh0uBpUX4FQMdpLSFh",
+      "content": "Edit applied successfully."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "question",
+        "description": "Use this tool when you need to ask the user questions during execution. This allows you to:\n1. Gather user preferences or requirements\n2. Clarify ambiguous instructions\n3. Get decisions on implementation choices as you work\n4. Offer choices to the user about what direction to take.\n\nUsage notes:\n- When `custom` is enabled (default), a \"Type your own answer\" option is added automatically; don't include \"Other\" or catch-all options\n- Answers are returned as arrays of labels; set `multiple: true` to allow selecting more than one\n- If you recommend a specific option, make that the first option in the list and add \"(Recommended)\" at the end of the label\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "questions": {
+              "description": "Questions to ask",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "description": "Complete question",
+                    "type": "string"
+                  },
+                  "header": {
+                    "description": "Very short label (max 30 chars)",
+                    "type": "string"
+                  },
+                  "options": {
+                    "description": "Available choices",
+                    "type": "array",
+                    "items": {
+                      "ref": "QuestionOption",
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "description": "Display text (1-5 words, concise)",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "Explanation of choice",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "description"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "multiple": {
+                    "description": "Allow selecting multiple choices",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "question",
+                  "header",
+                  "options"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "questions"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "bash",
+        "description": "Executes a given bash command in a persistent shell session with optional timeout, ensuring proper handling and security measures.\n\nAll commands run in D:\\codes\\vibecoding\\compare\\opencode by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID using `cd <directory> && <command>` patterns - use `workdir` instead.\n\nIMPORTANT: This tool is for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files) - use the specialized tools for this instead.\n\nBefore executing the command, please follow these steps:\n\n1. Directory Verification:\n   - If the command will create new directories or files, first use `ls` to verify the parent directory exists and is the correct location\n   - For example, before running \"mkdir foo/bar\", first use `ls foo` to check that \"foo\" exists and is the intended parent directory\n\n2. Command Execution:\n   - Always quote file paths that contain spaces with double quotes (e.g., rm \"path with spaces/file.txt\")\n   - Examples of proper quoting:\n     - mkdir \"/Users/name/My Documents\" (correct)\n     - mkdir /Users/name/My Documents (incorrect - will fail)\n     - python \"/path/with spaces/script.py\" (correct)\n     - python /path/with spaces/script.py (incorrect - will fail)\n   - After ensuring proper quoting, execute the command.\n   - Capture the output of the command.\n\nUsage notes:\n  - The command argument is required.\n  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after 120000ms (2 minutes).\n  - It is very helpful if you write a clear, concise description of what this command does in 5-10 words.\n  - If the output exceeds 2000 lines or 51200 bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use `head`, `tail`, or other truncation commands to limit output; the full output will already be captured to a file for more precise searching.\n\n  - Avoid using Bash with the `find`, `grep`, `cat`, `head`, `tail`, `sed`, `awk`, or `echo` commands, unless explicitly instructed or when these commands are truly necessary for the task. Instead, always prefer using the dedicated tools for these commands:\n    - File search: Use Glob (NOT find or ls)\n    - Content search: Use Grep (NOT grep or rg)\n    - Read files: Use Read (NOT cat/head/tail)\n    - Edit files: Use Edit (NOT sed/awk)\n    - Write files: Use Write (NOT echo >/cat <<EOF)\n    - Communication: Output text directly (NOT echo/printf)\n  - When issuing multiple commands:\n    - If the commands are independent and can run in parallel, make multiple Bash tool calls in a single message. For example, if you need to run \"git status\" and \"git diff\", send a single message with two Bash tool calls in parallel.\n    - If the commands depend on each other and must run sequentially, use a single Bash call with '&&' to chain them together (e.g., `git add . && git commit -m \"message\" && git push`). For instance, if one operation must complete before another starts (like mkdir before cp, Write before Bash for git operations, or git add before git commit), run these operations sequentially instead.\n    - Use ';' only when you need to run commands sequentially but don't care if earlier commands fail\n    - DO NOT use newlines to separate commands (newlines are ok in quoted strings)\n  - AVOID using `cd <directory> && <command>`. Use the `workdir` parameter to change directories instead.\n    <good-example>\n    Use workdir=\"/foo/bar\" with command: pytest tests\n    </good-example>\n    <bad-example>\n    cd /foo/bar && pytest tests\n    </bad-example>\n\n# Committing changes with git\n\nOnly create commits when requested by the user. If unclear, ask first. When the user asks you to create a new git commit, follow these steps carefully:\n\nGit Safety Protocol:\n- NEVER update the git config\n- NEVER run destructive/irreversible git commands (like push --force, hard reset, etc) unless the user explicitly requests them\n- NEVER skip hooks (--no-verify, --no-gpg-sign, etc) unless the user explicitly requests it\n- NEVER run force push to main/master, warn the user if they request it\n- Avoid git commit --amend. ONLY use --amend when ALL conditions are met:\n  (1) User explicitly requested amend, OR commit SUCCEEDED but pre-commit hook auto-modified files that need including\n  (2) HEAD commit was created by you in this conversation (verify: git log -1 --format='%an %ae')\n  (3) Commit has NOT been pushed to remote (verify: git status shows \"Your branch is ahead\")\n- CRITICAL: If commit FAILED or was REJECTED by hook, NEVER amend - fix the issue and create a NEW commit\n- CRITICAL: If you already pushed to remote, NEVER amend unless user explicitly requests it (requires force push)\n- NEVER commit changes unless the user explicitly asks you to. It is VERY IMPORTANT to only commit when explicitly asked, otherwise the user will feel that you are being too proactive.\n\n1. You can call multiple tools in a single response. When multiple independent pieces of information are requested and all commands are likely to succeed, run multiple tool calls in parallel for optimal performance. run the following bash commands in parallel, each using the Bash tool:\n  - Run a git status command to see all untracked files.\n  - Run a git diff command to see both staged and unstaged changes that will be committed.\n  - Run a git log command to see recent commit messages, so that you can follow this repository's commit message style.\n2. Analyze all staged changes (both previously staged and newly added) and draft a commit message:\n  - Summarize the nature of the changes (eg. new feature, enhancement to an existing feature, bug fix, refactoring, test, docs, etc.). Ensure the message accurately reflects the changes and their purpose (i.e. \"add\" means a wholly new feature, \"update\" means an enhancement to an existing feature, \"fix\" means a bug fix, etc.).\n  - Do not commit files that likely contain secrets (.env, credentials.json, etc.). Warn the user if they specifically request to commit those files\n  - Draft a concise (1-2 sentences) commit message that focuses on the \"why\" rather than the \"what\"\n  - Ensure it accurately reflects the changes and their purpose\n3. You can call multiple tools in a single response. When multiple independent pieces of information are requested and all commands are likely to succeed, run multiple tool calls in parallel for optimal performance. run the following commands:\n   - Add relevant untracked files to the staging area.\n   - Create the commit with a message\n   - Run git status after the commit completes to verify success.\n   Note: git status depends on the commit completing, so run it sequentially after the commit.\n4. If the commit fails due to pre-commit hook, fix the issue and create a NEW commit (see amend rules above)\n\nImportant notes:\n- NEVER run additional commands to read or explore code, besides git bash commands\n- NEVER use the TodoWrite or Task tools\n- DO NOT push to the remote repository unless the user explicitly asks you to do so\n- IMPORTANT: Never use git commands with the -i flag (like git rebase -i or git add -i) since they require interactive input which is not supported.\n- If there are no changes to commit (i.e., no untracked files and no modifications), do not create an empty commit\n\n# Creating pull requests\nUse the gh command via the Bash tool for ALL GitHub-related tasks including working with issues, pull requests, checks, and releases. If given a GitHub URL use the gh command to get the information needed.\n\nIMPORTANT: When the user asks you to create a pull request, follow these steps carefully:\n\n1. You can call multiple tools in a single response. When multiple independent pieces of information are requested and all commands are likely to succeed, run multiple tool calls in parallel for optimal performance. run the following bash commands in parallel using the Bash tool, in order to understand the current state of the branch since it diverged from the main branch:\n   - Run a git status command to see all untracked files\n   - Run a git diff command to see both staged and unstaged changes that will be committed\n   - Check if the current branch tracks a remote branch and is up to date with the remote, so you know if you need to push to the remote\n   - Run a git log command and `git diff [base-branch]...HEAD` to understand the full commit history for the current branch (from the time it diverged from the base branch)\n2. Analyze all changes that will be included in the pull request, making sure to look at all relevant commits (NOT just the latest commit, but ALL commits that will be included in the pull request!!!), and draft a pull request summary\n3. You can call multiple tools in a single response. When multiple independent pieces of information are requested and all commands are likely to succeed, run multiple tool calls in parallel for optimal performance. run the following commands in parallel:\n   - Create new branch if needed\n   - Push to remote with -u flag if needed\n   - Create PR using gh pr create with the format below. Use a HEREDOC to pass the body to ensure correct formatting.\n<example>\ngh pr create --title \"the pr title\" --body \"$(cat <<'EOF'\n## Summary\n<1-3 bullet points>\n</example>\n\nImportant:\n- DO NOT use the TodoWrite or Task tools\n- Return the PR URL when you're done, so the user can see it\n\n# Other common operations\n- View comments on a GitHub PR: gh api repos/foo/bar/pulls/123/comments\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "command": {
+              "description": "The command to execute",
+              "type": "string"
+            },
+            "timeout": {
+              "description": "Optional timeout in milliseconds",
+              "type": "number"
+            },
+            "workdir": {
+              "description": "The working directory to run the command in. Defaults to D:\\codes\\vibecoding\\compare\\opencode. Use this instead of 'cd' commands.",
+              "type": "string"
+            },
+            "description": {
+              "description": "Clear, concise description of what this command does in 5-10 words. Examples:\nInput: ls\nOutput: Lists files in current directory\n\nInput: git status\nOutput: Shows working tree status\n\nInput: npm install\nOutput: Installs package dependencies\n\nInput: mkdir foo\nOutput: Creates directory 'foo'",
+              "type": "string"
+            }
+          },
+          "required": [
+            "command",
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read",
+        "description": "Read a file or directory from the local filesystem. If the path does not exist, an error is returned.\n\nUsage:\n- The filePath parameter should be an absolute path.\n- By default, this tool returns up to 2000 lines from the start of the file.\n- The offset parameter is the line number to start from (1-indexed).\n- To read later sections, call this tool again with a larger offset.\n- Use the grep tool to find specific content in large files or files with long lines.\n- If you are unsure of the correct file path, use the glob tool to look up filenames by glob pattern.\n- Contents are returned with each line prefixed by its line number as `<line>: <content>`. For example, if a file has contents \"foo\\n\", you will receive \"1: foo\\n\". For directories, entries are returned one per line (without line numbers) with a trailing `/` for subdirectories.\n- Any line longer than 2000 characters is truncated.\n- Call this tool in parallel when you know there are multiple files you want to read.\n- Avoid tiny repeated slices (30 line chunks). If you need more context, read a larger window.\n- This tool can read image files and PDFs and return them as file attachments.\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "description": "The absolute path to the file or directory to read",
+              "type": "string"
+            },
+            "offset": {
+              "description": "The line number to start reading from (1-indexed)",
+              "type": "number"
+            },
+            "limit": {
+              "description": "The maximum number of lines to read (defaults to 2000)",
+              "type": "number"
+            }
+          },
+          "required": [
+            "filePath"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "glob",
+        "description": "- Fast file pattern matching tool that works with any codebase size\n- Supports glob patterns like \"**/*.js\" or \"src/**/*.ts\"\n- Returns matching file paths sorted by modification time\n- Use this tool when you need to find files by name patterns\n- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, use the Task tool instead\n- You have the capability to call multiple tools in a single response. It is always better to speculatively perform multiple searches as a batch that are potentially useful.\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "description": "The glob pattern to match files against",
+              "type": "string"
+            },
+            "path": {
+              "description": "The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for the default behavior. Must be a valid directory path if provided.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "grep",
+        "description": "- Fast content search tool that works with any codebase size\n- Searches file contents using regular expressions\n- Supports full regex syntax (eg. \"log.*Error\", \"function\\s+\\w+\", etc.)\n- Filter files by pattern with the include parameter (eg. \"*.js\", \"*.{ts,tsx}\")\n- Returns file paths and line numbers with at least one match sorted by modification time\n- Use this tool when you need to find files containing specific patterns\n- If you need to identify/count the number of matches within files, use the Bash tool with `rg` (ripgrep) directly. Do NOT use `grep`.\n- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, use the Task tool instead\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "description": "The regex pattern to search for in file contents",
+              "type": "string"
+            },
+            "path": {
+              "description": "The directory to search in. Defaults to the current working directory.",
+              "type": "string"
+            },
+            "include": {
+              "description": "File pattern to include in the search (e.g. \"*.js\", \"*.{ts,tsx}\")",
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "edit",
+        "description": "Performs exact string replacements in files. \n\nUsage:\n- You must use your `Read` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file. \n- When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces) as it appears AFTER the line number prefix. The line number prefix format is: line number + colon + space (e.g., `1: `). Everything after that space is the actual file content to match. Never include any part of the line number prefix in the oldString or newString.\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.\n- The edit will FAIL if `oldString` is not found in the file with an error \"oldString not found in content\".\n- The edit will FAIL if `oldString` is found multiple times in the file with an error \"Found multiple matches for oldString. Provide more surrounding lines in oldString to identify the correct match.\" Either provide a larger string with more surrounding context to make it unique or use `replaceAll` to change every instance of `oldString`. \n- Use `replaceAll` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "description": "The absolute path to the file to modify",
+              "type": "string"
+            },
+            "oldString": {
+              "description": "The text to replace",
+              "type": "string"
+            },
+            "newString": {
+              "description": "The text to replace it with (must be different from oldString)",
+              "type": "string"
+            },
+            "replaceAll": {
+              "description": "Replace all occurrences of oldString (default false)",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "filePath",
+            "oldString",
+            "newString"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write",
+        "description": "Writes a file to the local filesystem.\n\nUsage:\n- This tool will overwrite the existing file if there is one at the provided path.\n- If this is an existing file, you MUST use the Read tool first to read the file's contents. This tool will fail if you did not read the file first.\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.\n- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "content": {
+              "description": "The content to write to the file",
+              "type": "string"
+            },
+            "filePath": {
+              "description": "The absolute path to the file to write (must be absolute, not relative)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "content",
+            "filePath"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "task",
+        "description": "Launch a new agent to handle complex, multistep tasks autonomously.\n\nAvailable agent types and the tools they have access to:\n- explore: Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. \"src/components/**/*.tsx\"), search code for keywords (eg. \"API endpoints\"), or answer questions about the codebase (eg. \"how do API endpoints work?\"). When calling this agent, specify the desired thoroughness level: \"quick\" for basic searches, \"medium\" for moderate exploration, or \"very thorough\" for comprehensive analysis across multiple locations and naming conventions.\n- general: General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.\n\nWhen using the Task tool, you must specify a subagent_type parameter to select which agent type to use.\n\nWhen to use the Task tool:\n- When you are instructed to execute custom slash commands. Use the Task tool with the slash command invocation as the entire prompt. The slash command can take arguments. For example: Task(description=\"Check the file\", prompt=\"/check-file path/to/file.py\")\n\nWhen NOT to use the Task tool:\n- If you want to read a specific file path, use the Read or Glob tool instead of the Task tool, to find the match more quickly\n- If you are searching for a specific class definition like \"class Foo\", use the Glob tool instead, to find the match more quickly\n- If you are searching for code within a specific file or set of 2-3 files, use the Read tool instead of the Task tool, to find the match more quickly\n- Other tasks that are not related to the agent descriptions above\n\n\nUsage notes:\n1. Launch multiple agents concurrently whenever possible, to maximize performance; to do that, use a single message with multiple tool uses\n2. When the agent is done, it will return a single message back to you. The result returned by the agent is not visible to the user. To show the user the result, you should send a text message back to the user with a concise summary of the result. The output includes a task_id you can reuse later to continue the same subagent session.\n3. Each agent invocation starts with a fresh context unless you provide task_id to resume the same subagent session (which continues with its previous messages and tool outputs). When starting fresh, your prompt should contain a highly detailed task description for the agent to perform autonomously and you should specify exactly what information the agent should return back to you in its final and only message to you.\n4. The agent's outputs should generally be trusted\n5. Clearly tell the agent whether you expect it to write code or just to do research (search, file reads, web fetches, etc.), since it is not aware of the user's intent. Tell it how to verify its work if possible (e.g., relevant test commands).\n6. If the agent description mentions that it should be used proactively, then you should try your best to use it without the user having to ask for it first. Use your judgement.\n\nExample usage (NOTE: The agents below are fictional examples for illustration only - use the actual agents listed above):\n\n<example_agent_descriptions>\n\"code-reviewer\": use this agent after you are done writing a significant piece of code\n\"greeting-responder\": use this agent when to respond to user greetings with a friendly joke\n</example_agent_description>\n\n<example>\nuser: \"Please write a function that checks if a number is prime\"\nassistant: Sure let me write a function that checks if a number is prime\nassistant: First let me use the Write tool to write a function that checks if a number is prime\nassistant: I'm going to use the Write tool to write the following code:\n<code>\nfunction isPrime(n) {\n  if (n <= 1) return false\n  for (let i = 2; i * i <= n; i++) {\n    if (n % i === 0) return false\n  }\n  return true\n}\n</code>\n<commentary>\nSince a significant piece of code was written and the task was completed, now use the code-reviewer agent to review the code\n</commentary>\nassistant: Now let me use the code-reviewer agent to review the code\nassistant: Uses the Task tool to launch the code-reviewer agent\n</example>\n\n<example>\nuser: \"Hello\"\n<commentary>\nSince the user is greeting, use the greeting-responder agent to respond with a friendly joke\n</commentary>\nassistant: \"I'm going to use the Task tool to launch the with the greeting-responder agent\"\n</example>\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "description": {
+              "description": "A short (3-5 words) description of the task",
+              "type": "string"
+            },
+            "prompt": {
+              "description": "The task for the agent to perform",
+              "type": "string"
+            },
+            "subagent_type": {
+              "description": "The type of specialized agent to use for this task",
+              "type": "string"
+            },
+            "task_id": {
+              "description": "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
+              "type": "string"
+            },
+            "command": {
+              "description": "The command that triggered this task",
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "prompt",
+            "subagent_type"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "webfetch",
+        "description": "- Fetches content from a specified URL\n- Takes a URL and optional format as input\n- Fetches the URL content, converts to requested format (markdown by default)\n- Returns the content in the specified format\n- Use this tool when you need to retrieve and analyze web content\n\nUsage notes:\n  - IMPORTANT: if another tool is present that offers better web fetching capabilities, is more targeted to the task, or has fewer restrictions, prefer using that tool instead of this one.\n  - The URL must be a fully-formed valid URL\n  - HTTP URLs will be automatically upgraded to HTTPS\n  - Format options: \"markdown\" (default), \"text\", or \"html\"\n  - This tool is read-only and does not modify any files\n  - Results may be summarized if the content is very large\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "url": {
+              "description": "The URL to fetch content from",
+              "type": "string"
+            },
+            "format": {
+              "description": "The format to return the content in (text, markdown, or html). Defaults to markdown.",
+              "default": "markdown",
+              "type": "string",
+              "enum": [
+                "text",
+                "markdown",
+                "html"
+              ]
+            },
+            "timeout": {
+              "description": "Optional timeout in seconds (max 120)",
+              "type": "number"
+            }
+          },
+          "required": [
+            "url",
+            "format"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "todowrite",
+        "description": "Use this tool to create and manage a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.\nIt also helps the user understand the progress of the task and overall progress of their requests.\n\n## When to Use This Tool\nUse this tool proactively in these scenarios:\n\n1. Complex multistep tasks - When a task requires 3 or more distinct steps or actions\n2. Non-trivial and complex tasks - Tasks that require careful planning or multiple operations\n3. User explicitly requests todo list - When the user directly asks you to use the todo list\n4. User provides multiple tasks - When users provide a list of things to be done (numbered or comma-separated)\n5. After receiving new instructions - Immediately capture user requirements as todos. Feel free to edit the todo list based on new information.\n6. After completing a task - Mark it complete and add any new follow-up tasks\n7. When you start working on a new task, mark the todo as in_progress. Ideally you should only have one todo as in_progress at a time. Complete existing tasks before starting new ones.\n\n## When NOT to Use This Tool\n\nSkip using this tool when:\n1. There is only a single, straightforward task\n2. The task is trivial and tracking it provides no organizational benefit\n3. The task can be completed in less than 3 trivial steps\n4. The task is purely conversational or informational\n\nNOTE that you should not use this tool if there is only one trivial task to do. In this case you are better off just doing the task directly.\n\n## Examples of When to Use the Todo List\n\n<example>\nUser: I want to add a dark mode toggle to the application settings. Make sure you run the tests and build when you're done!\nAssistant: I'll help add a dark mode toggle to your application settings. Let me create a todo list to track this implementation.\n*Creates todo list with the following items:*\n1. Create dark mode toggle component in Settings page\n2. Add dark mode state management (context/store)\n3. Implement CSS-in-JS styles for dark theme\n4. Update existing components to support theme switching\n5. Run tests and build process, addressing any failures or errors that occur\n*Begins working on the first task*\n\n<reasoning>\nThe assistant used the todo list because:\n1. Adding dark mode is a multi-step feature requiring UI, state management, and styling changes\n2. The user explicitly requested tests and build be run afterward\n3. The assistant inferred that tests and build need to pass by adding \"Ensure tests and build succeed\" as the final task\n</reasoning>\n</example>\n\n<example>\nUser: Help me rename the function getCwd to getCurrentWorkingDirectory across my project\nAssistant: Let me first search through your codebase to find all occurrences of 'getCwd'.\n*Uses grep or search tools to locate all instances of getCwd in the codebase*\nAssistant: I've found 15 instances of 'getCwd' across 8 different files. Let me create a todo list to track these changes.\n*Creates todo list with specific items for each file that needs updating*\n\n<reasoning>\nThe assistant used the todo list because:\n1. First, the assistant searched to understand the scope of the task\n2. Upon finding multiple occurrences across different files, it determined this was a complex task with multiple steps\n3. The todo list helps ensure every instance is tracked and updated systematically\n4. This approach prevents missing any occurrences and maintains code consistency\n</reasoning>\n</example>\n\n\n<example>\nUser: I need to implement these features for my e-commerce site: user registration, product catalog, shopping cart, and checkout flow.\nAssistant: I'll help implement these features. First, let's add all the features to the todo list.\n*Creates a todo list breaking down each feature into specific tasks based on the project architecture*\nAssistant: Let's start with user registration. This will involve creating database models, API endpoints, and frontend forms that integrate with your existing authentication system.\n\n<reasoning>\nThe assistant used the todo list because:\n1. The user provided multiple complex features to implement in a comma separated list\n2. The todo list helps organize these large features into manageable tasks\n3. This approach allows for tracking progress across the entire implementation\n</reasoning>\n</example>\n\n<example>\nUser: Can you help optimize my React application? It's rendering slowly and has performance issues.</user>\nAssistant: I'll help optimize your React application. First, let me examine your codebase to identify potential performance bottlenecks.\n*Reviews component structure, render patterns, state management, and data fetching*\nAssistant: After analyzing your codebase, I've identified several performance issues. Let me create a todo list to track our optimization efforts.\n*Creates todo list with items like: 1) Implement memoization for expensive calculations in ProductList, 2) Add virtualization for long lists in Dashboard, 3) Optimize image loading in Gallery component, 4) Fix state update loops in ShoppingCart, 5) Review bundle size and implement code splitting*\nLet's start by implementing memoization for the expensive calculations in your ProductList component.</assistant>\n\n<reasoning>\nThe assistant used the todo list because:\n1. First, the assistant examined the codebase to identify specific performance issues\n2. Based on this analysis, it identified multiple optimization opportunities\n3. Performance optimization is a non-trivial task requiring multiple steps\n4. The todo list helps methodically track improvements across different components\n5. This systematic approach ensures all performance bottlenecks are addressed\n</reasoning>\n</example>\n\n## Examples of When NOT to Use the Todo List\n\n<example>\nUser: How do I print 'Hello World' in Python?\nAssistant: In Python, you can print \"Hello World\" with this simple code:\n\npython\nprint(\"Hello World\")\n\nThis will output the text \"Hello World\" to the console when executed.</assistant>\n\n<reasoning>\nThe assistant did not use the todo list because this is a single, trivial task that can be completed in one step. There's no need to track multiple tasks or steps for such a straightforward request.\n</reasoning>\n</example>\n\n<example>\nUser: What does the git status command do?\nAssistant: The git status command shows the current state of your working directory and staging area. It displays which changes have been staged, which haven't, and which files aren't being tracked by Git. This is a fundamental command for understanding the current state of your repository before making commits.\n\n<reasoning>\nThe assistant did not use the todo list because this is an informational request with no actual coding task to complete. The user is simply asking for an explanation, not for the assistant to perform multiple steps or tasks.\n</reasoning>\n</example>\n\n<example>\nUser: Can you add a comment to the calculateTotal function to explain what it does?\nAssistant: Sure, let me add a comment to the calculateTotal function to explain what it does.\n* Uses the Edit tool to add a comment to the calculateTotal function *\n\n<reasoning>\nThe assistant did not use the todo list because this is a single, straightforward task confined to one location in the code. Adding a comment doesn't require tracking multiple steps or systematic organization.\n</reasoning>\n</example>\n\n<example>\nUser: Run npm install for me and tell me what happens.\nAssistant: I'll run the npm install command for you.\n\n*Executes: npm install*\n\nThe command completed successfully. Here's the output:\n[Output of npm install command]\n\nAll dependencies have been installed according to your package.json file.\n\n<reasoning>\nThe assistant did not use the todo list because this is a single command execution with immediate results. There are no multiple steps to track or organize, making the todo list unnecessary for this straightforward task.\n</reasoning>\n</example>\n\n## Task States and Management\n\n1. **Task States**: Use these states to track progress:\n   - pending: Task not yet started\n   - in_progress: Currently working on (limit to ONE task at a time)\n   - completed: Task finished successfully\n   - cancelled: Task no longer needed\n\n2. **Task Management**:\n   - Update task status in real-time as you work\n   - Mark tasks complete IMMEDIATELY after finishing (don't batch completions)\n   - Only have ONE task in_progress at any time\n   - Complete current tasks before starting new ones\n   - Cancel tasks that become irrelevant\n\n3. **Task Breakdown**:\n   - Create specific, actionable items\n   - Break complex tasks into smaller, manageable steps\n   - Use clear, descriptive task names\n\nWhen in doubt, use this tool. Being proactive with task management demonstrates attentiveness and ensures you complete all requirements successfully.\n\n",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "todos": {
+              "description": "The updated todo list",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "description": "Brief description of the task",
+                    "type": "string"
+                  },
+                  "status": {
+                    "description": "Current status of the task: pending, in_progress, completed, cancelled",
+                    "type": "string"
+                  },
+                  "priority": {
+                    "description": "Priority level of the task: high, medium, low",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "content",
+                  "status",
+                  "priority"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "todos"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "skill",
+        "description": "Load a specialized skill that provides domain-specific instructions and workflows. No skills are currently available.",
+        "parameters": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name of the skill from available_skills",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "stream": true,
+  "stream_options": {
+    "include_usage": true
+  }
+}
+--- Merged SSE Response ---
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "已更新为深色玻璃拟态（Glassmorphism）风格。主要改进：\n\n- **深色渐变背景** + **毛玻璃容器**，更有层次感\n- **霓虹紫渐变** 作为主色调（按钮、徽章、选中态）\n- 输入框暗色适配，聚焦时带发光光晕\n- 筛选栏改为**内嵌式胶囊**设计\n- 列表项 hover 时显示删除按钮，默认隐藏，更清爽\n- 所有交互加了平滑过渡和微动效",
+        "reasoning_content": "The edit was applied. Let me verify the result looks good by reading the file.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1777191253,
+  "id": "ca197331-c768-4d6b-bb06-1dd59669ed7b",
+  "model": "deepseek-v4-flash",
+  "object": "chat.completion",
+  "system_fingerprint": "fp_058df29938_prod0820_fp8_kvcache_20260402",
+  "usage": {
+    "completion_tokens": 130,
+    "completion_tokens_details": {
+      "reasoning_tokens": 17
+    },
+    "prompt_cache_hit_tokens": 15872,
+    "prompt_cache_miss_tokens": 3377,
+    "prompt_tokens": 19249,
+    "prompt_tokens_details": {
+      "cached_tokens": 15872
+    },
+    "total_tokens": 19379
+  }
+}
+========================================================================
+
